@@ -27,7 +27,7 @@ script.
 
 # Requirements
 - nmap
-- CVEScannerV2
+- [CVEScannerV2](https://github.com/scmanjarrez/CVEScannerV2)
 - python
 
 # Run
