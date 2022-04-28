@@ -22,14 +22,16 @@
 
 from pathlib import Path
 
+import scapy.all as scp
 import threading
 import nmap3
+import time
 import re
 
 CVE_LOG = 'output/log'
 CVE_RAW = 'output/raw'
 CVE_JSON = 'output/json'
-
+SUBNET_TIME = 5
 COLORS = {
     'R': '\033[91m',
     'Y': '\033[93m',
@@ -97,6 +99,22 @@ class ARPPacket:
 
     def hwdst_null(self):
         return self.packet.hwdst == '00:00:00:00:00:00'
+
+
+class ARPPing(threading.Thread):
+    def __init__(self, iface, subnet, timer):
+        threading.Thread.__init__(self)
+        self.iface = iface
+        self.subnet = subnet
+        self.timer = timer
+        self.daemon = True
+
+    def run(self):
+        time.sleep(self.timer)
+        log('info', f"Scanning subnet: {self.subnet}")
+        scp.sendp(
+            scp.Ether(dst="ff:ff:ff:ff:ff:ff") /
+            scp.ARP(pdst=self.subnet), iface=self.iface, verbose=0)
 
 
 class NmapScanner(threading.Thread):

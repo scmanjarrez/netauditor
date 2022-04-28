@@ -2,7 +2,7 @@
 
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# utils - Utilities module.
+# netauditor - Main module.
 
 # Copyright (C) 2022 Sergio Chica Manjarrez @ pervasive.it.uc3m.es.
 # Universidad Carlos III de Madrid.
@@ -74,13 +74,13 @@ class ARPMonitor(threading.Thread):
                 th.start()
 
 
-def arp_scanner():
+def arp_scanner(args):
     ut.log('info', "Running scheduled job...")
     subnets = []
     for name in netifaces.interfaces():
         if (name != 'lo' and
-            not name.startswith('docker') and
-            not name.startswith('vmnet')):  # noqa
+            (not name.startswith('vmnet') or args.force_vmnet) and
+            (not name.startswith('docker') or args.force_docker)):  # noqa
             if netifaces.AF_INET in netifaces.ifaddresses(name):
                 iface = netifaces.ifaddresses(name)[netifaces.AF_INET]
                 for sn in iface:
@@ -88,13 +88,10 @@ def arp_scanner():
                         f'{sn["addr"]}/{sn["netmask"]}')
                     subnet = str(ip.network)
                     if subnet not in subnets:
+                        arping = ut.ARPPing(name, subnet,
+                                            len(subnets) * ut.SUBNET_TIME)
+                        arping.start()
                         subnets.append(subnet)
-                        ans, unans = scp.srp(
-                            scp.Ether(dst="ff:ff:ff:ff:ff:ff") /
-                            scp.ARP(pdst=subnet), timeout=2, verbose=0)
-                        # ans.summary(
-                        #     lambda src, recv:
-                        #     recv.sprintf("%Ether.src% %ARP.psrc%"))
 
 
 def main():
@@ -103,6 +100,12 @@ def main():
         description="Network scanner and analyzer.")
     parser.add_argument('--verbose', action='store_true',
                         help="Verbose output.")
+    parser.add_argument('--schedule-time', type=int, default=5,
+                        help="Time between arp pings in minutes. Default: 5")
+    parser.add_argument('--force-docker', action='store_true',
+                        help="Force scan in dockerN subnets.")
+    parser.add_argument('--force-vmnet', action='store_true',
+                        help="Force scan in vmnetN subnets.")
     args = parser.parse_args()
     if args.verbose:
         ut.log_verbose()
@@ -112,12 +115,15 @@ def main():
     monitor = ARPMonitor()
     monitor.start()
     scheduler = BackgroundScheduler(timezone="Europe/Madrid")
-    scheduler.add_job(arp_scanner, 'interval', minutes=5,
+    scheduler.add_job(arp_scanner, 'interval', args=(args,),
+                      minutes=args.schedule_time,
                       next_run_time=datetime.datetime.now())
     scheduler.start()
 
-    import time
-    time.sleep(240)
+    try:
+        input('Press [ENTER] to stop...\n')
+    except KeyboardInterrupt:
+        pass
 
 
 if __name__ == '__main__':
