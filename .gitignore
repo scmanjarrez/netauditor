@@ -4,6 +4,8 @@ cve.db
 cvescannerv2.nse
 http-paths-vulnerscom.json
 http-regex-vulnerscom.json
+output/
+tsunami/
 
 ## Default python ignore
 # Byte-compiled / optimized / DLL files

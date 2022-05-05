@@ -24,6 +24,7 @@
 
 # from zerconf import ServiceBrowser, ZeroConf  # apple devices
 from apscheduler.schedulers.background import BackgroundScheduler
+from mac_vendor_lookup import MacLookup
 
 import scapy.all as scp
 import utils as ut
@@ -38,6 +39,7 @@ class ARPMonitor(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         self.cache = {}
+        self.lookup = MacLookup().lookup
         self.daemon = True
 
     def run(self):
@@ -48,29 +50,30 @@ class ARPMonitor(threading.Thread):
             arp = ut.ARPPacket(packet[scp.ARP])
             target = None
             if arp.hwsrc not in self.cache and not arp.hwdst_null():
-                self.cache[arp.hwsrc] = arp.psrc
                 ut.log('succ',
                        f"New device detected ({arp.op}): "
                        f"{arp.hwsrc} - {arp.psrc}")
+                self.cache[arp.hwsrc] = [arp.psrc]
                 target = (arp.hwsrc, arp.psrc)
             if arp.op == 'is-at':
                 if arp.hwdst not in self.cache and not arp.hwdst_null():
-                    self.cache[arp.hwdst] = arp.pdst
                     ut.log('succ',
                            f"New device detected ({arp.op}): "
                            f"{arp.hwdst} - {arp.pdst}")
+                    self.cache[arp.hwdst] = [arp.pdst]
                     target = (arp.hwdst, arp.pdst)
                 elif (arp.hwdst in self.cache and
-                      arp.pdst != self.cache[arp.hwdst]):
+                      arp.pdst not in self.cache[arp.hwdst]):
                     ut.log('warn',
-                           f"Inconsistency detected ({arp.op}): "
-                           f"{arp.hwdst} - {self.cache[arp.hwdst]} -> "
-                           f"{arp.pdst}")
+                           f"New IP detected ({arp.op}): "
+                           f"{arp.hwdst} - {arp.pdst} -> "
+                           f"{self.cache[arp.hwdst]}")
+                    self.cache[arp.hwdst].append(arp.pdst)
                     target = (arp.hwdst, arp.pdst)
             if target is not None:
                 ut.log('info',
                        f"Starting analysis: {target[0]} - {target[1]}")
-                th = ut.NmapScanner(*target)
+                th = ut.NmapScanner(self.lookup, *target)
                 th.start()
 
 
@@ -114,6 +117,7 @@ def main():
 
     monitor = ARPMonitor()
     monitor.start()
+
     scheduler = BackgroundScheduler(timezone="Europe/Madrid")
     scheduler.add_job(arp_scanner, 'interval', args=(args,),
                       minutes=args.schedule_time,

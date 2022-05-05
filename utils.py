@@ -24,13 +24,19 @@ from pathlib import Path
 
 import scapy.all as scp
 import threading
+import base64
 import nmap3
+import json
 import time
+import os
 import re
 
-CVE_LOG = 'output/log'
-CVE_RAW = 'output/raw'
-CVE_JSON = 'output/json'
+OUT = 'output'
+DIRS = {
+    'log': f'{OUT}/log',
+    'raw': f'{OUT}/raw',
+    'json': f'{OUT}/json'
+}
 SUBNET_TIME = 5
 COLORS = {
     'R': '\033[91m',
@@ -43,7 +49,7 @@ COLORS = {
 LOG = {
     'normal': '',
     'succ': '[+] ', 'info': '[*] ',
-    'warn': '[-] ', 'error': '[!] ',
+    'warn': '[!] ', 'error': '[!] ',
     'enabled': False}
 
 
@@ -74,10 +80,12 @@ def log(ltype, msg, end='\n', err=None):
 
 
 def create_dirs():
+    uid = int(os.getenv('SUDO_UID'))
     try:
-        Path(CVE_LOG).mkdir(parents=True, exist_ok=True)
-        Path(CVE_RAW).mkdir(parents=True, exist_ok=True)
-        Path(CVE_JSON).mkdir(parents=True, exist_ok=True)
+        for dr in DIRS:
+            Path(DIRS[dr]).mkdir(parents=True, exist_ok=True)
+            os.chown(DIRS[dr], uid, uid)
+        os.chown(OUT, uid, uid)
     except PermissionError as ex:
         log('error', f"{ex.strerror}: {ex.filename}.", err=ex.errno)
 
@@ -121,19 +129,35 @@ class NmapScanner(threading.Thread):
     elem = re.compile(r'.*?: (.*)')
     cve = re.compile(r'\s*([A-Z0-9-]*)\s*([0-9.]*)\s*([0-9.-]*)'
                      r'\s*([A-Za-z]*)\s*([A-Za-z]*)')
+    nonce_sz = 3
 
-    def __init__(self, mac, target):
+    def __init__(self, lookup, mac, target):
         threading.Thread.__init__(self)
+        self.lookup = lookup
         self.mac = mac
         self.target = target
         self.daemon = True
 
     def run(self):
+        nonce = self.nonce()
+        uid = int(os.getenv('SUDO_UID'))
+        for dr in DIRS:
+            open(f'{DIRS[dr]}/{self.mac}_{nonce}.{dr}', 'w').close()
+            os.chown(f'{DIRS[dr]}/{self.mac}_{nonce}.{dr}', uid, uid)
         nm = nmap3.Nmap()
         nm.run_command(['/usr/bin/nmap',
-                        '-oN', f'{CVE_RAW}/{self.mac}.raw',
+                        '-oN', f'{DIRS["raw"]}/{self.mac}_{nonce}.raw',
                         '-sV', self.target,
                         '--script', 'cvescannerv2',
                         '--script-args',
-                        f'log={CVE_LOG}/{self.mac}.log,'
-                        f'json={CVE_JSON}/{self.mac}.json'])
+                        f'log={DIRS["log"]}/{self.mac}_{nonce}.log,'
+                        f'json={DIRS["json"]}/{self.mac}_{nonce}.json'])
+        with open(f'{DIRS["json"]}/{self.mac}_{nonce}.json', 'r+') as f:
+            data = json.load(f)
+            data[self.target]['manufacturer'] = self.lookup(self.mac)
+            f.seek(0)
+            json.dump(data, f)
+
+    def nonce(self):
+        return base64.b64encode(os.urandom(self.nonce_sz),
+                                altchars=b'-:').decode()
