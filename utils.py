@@ -51,6 +51,7 @@ LOG = {
     'succ': '[+] ', 'info': '[*] ',
     'warn': '[!] ', 'error': '[!] ',
     'enabled': False}
+UID = None
 
 
 def disable_ansi_colors():
@@ -79,13 +80,23 @@ def log(ltype, msg, end='\n', err=None):
         print(f"{color}{msg}", end=end, flush=True)
 
 
+def uid():
+    global UID
+    if UID is None:
+        uidenv = os.getenv('SUDO_UID')
+        if uidenv is not None:
+            UID = int(uidenv)
+        else:
+            UID = os.getuid()
+
+
 def create_dirs():
-    uid = int(os.getenv('SUDO_UID'))
+    uid()
     try:
         for dr in DIRS:
             Path(DIRS[dr]).mkdir(parents=True, exist_ok=True)
-            os.chown(DIRS[dr], uid, uid)
-        os.chown(OUT, uid, uid)
+            os.chown(DIRS[dr], UID, UID)
+        os.chown(OUT, UID, UID)
     except PermissionError as ex:
         log('error', f"{ex.strerror}: {ex.filename}.", err=ex.errno)
 
@@ -140,10 +151,9 @@ class NmapScanner(threading.Thread):
 
     def run(self):
         nonce = self.nonce()
-        uid = int(os.getenv('SUDO_UID'))
         for dr in DIRS:
             open(f'{DIRS[dr]}/{self.mac}_{nonce}.{dr}', 'w').close()
-            os.chown(f'{DIRS[dr]}/{self.mac}_{nonce}.{dr}', uid, uid)
+            os.chown(f'{DIRS[dr]}/{self.mac}_{nonce}.{dr}', UID, UID)
         nm = nmap3.Nmap()
         nm.run_command(['/usr/bin/nmap',
                         '-oN', f'{DIRS["raw"]}/{self.mac}_{nonce}.raw',
