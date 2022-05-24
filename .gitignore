@@ -1,4 +1,6 @@
 ## Own ignore
+netauditor-container/
+netauditor-image/
 tmp/
 cve.db
 cvescannerv2.nse

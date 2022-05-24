@@ -20,6 +20,7 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
+from mac_vendor_lookup import VendorNotFoundError
 from pathlib import Path
 
 import scapy.all as scp
@@ -164,7 +165,10 @@ class NmapScanner(threading.Thread):
                         f'json={DIRS["json"]}/{self.mac}_{nonce}.json'])
         with open(f'{DIRS["json"]}/{self.mac}_{nonce}.json', 'r+') as f:
             data = json.load(f)
-            data[self.target]['manufacturer'] = self.lookup(self.mac)
+            try:
+                data[self.target]['manufacturer'] = self.lookup(self.mac)
+            except VendorNotFoundError:
+                data[self.target]['manufacturer'] = "unknown"
             f.seek(0)
             json.dump(data, f)
 
