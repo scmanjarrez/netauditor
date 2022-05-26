@@ -8,6 +8,7 @@ Tool to monitor, scan and analyze network devices
     - [Pre-launch](#pre-launch)
     - [Launch](#launch)
   - [Output](#output)
+  - [Docker container](#docker-container)
   - [Acknowledgements](#acknowledgements)
   - [License](#license)
 
@@ -58,6 +59,14 @@ in three folders:
 - log: containing CVEScannerV2 log output
 - json: containing CVEScannerV2 log output as json, for easy processing
 - raw: containing NMAP output
+
+# Docker container
+We have prepared a container with all dependencies to run netauditor.
+```bash
+$ docker run -v $PWD/output:/CVEScannerV2/output registry.gast.it.uc3m.es/kubernetesdockerimages/netauditor:latest
+```
+> **Note**: The output will be stored in $PWD/output.
+
 
 # Acknowledgements
 **This work has been supported by National R&D Project TEC2017-84197-C4-1-R and by
