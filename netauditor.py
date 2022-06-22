@@ -101,19 +101,21 @@ def main():
     parser = argparse.ArgumentParser(
         prog='python netuaditor.py',
         description="Network scanner and analyzer.")
-    parser.add_argument('--verbose', action='store_true',
+    parser.add_argument('-v', '--verbose', action='store_true',
                         help="Verbose output.")
-    parser.add_argument('--schedule-time', type=int, default=5,
+    parser.add_argument('-t', '--schedule-time', type=int, default=5,
                         help="Time between arp pings in minutes. Default: 5")
-    parser.add_argument('--force-docker', action='store_true',
-                        help="Force scan in dockerN subnets.")
-    parser.add_argument('--force-vmnet', action='store_true',
-                        help="Force scan in vmnetN subnets.")
+    parser.add_argument('-fd', '--force-docker', action='store_true',
+                        help="Force scan in dockerX subnets.")
+    parser.add_argument('-fv', '--force-vmnet', action='store_true',
+                        help="Force scan in vmnetX subnets.")
+    parser.add_argument('-o', '--output', default='output',
+                        help="Output directory.")
     args = parser.parse_args()
     if args.verbose:
         ut.log_verbose()
 
-    ut.create_dirs()
+    ut.create_dirs(args.output)
 
     monitor = ARPMonitor()
     monitor.start()

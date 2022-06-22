@@ -32,12 +32,7 @@ import time
 import os
 import re
 
-OUT = 'output'
-DIRS = {
-    'log': f'{OUT}/log',
-    'raw': f'{OUT}/raw',
-    'json': f'{OUT}/json'
-}
+DIRS = {}
 SUBNET_TIME = 5
 COLORS = {
     'R': '\033[91m',
@@ -91,13 +86,16 @@ def uid():
             UID = os.getuid()
 
 
-def create_dirs():
+def create_dirs(output):
+    DIRS['log'] = f'{output}/log'
+    DIRS['raw'] = f'{output}/raw'
+    DIRS['json'] = f'{output}/json'
     uid()
     try:
         for dr in DIRS:
             Path(DIRS[dr]).mkdir(parents=True, exist_ok=True)
             os.chown(DIRS[dr], UID, UID)
-        os.chown(OUT, UID, UID)
+        os.chown(output, UID, UID)
     except PermissionError as ex:
         log('error', f"{ex.strerror}: {ex.filename}.", err=ex.errno)
 
