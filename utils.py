@@ -20,10 +20,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from mac_vendor_lookup import VendorNotFoundError
 from pathlib import Path
 
 import scapy.all as scp
+import requests as req
 import threading
 import base64
 import nmap3
@@ -141,9 +141,8 @@ class NmapScanner(threading.Thread):
                      r'\s*([A-Za-z]*)\s*([A-Za-z]*)')
     nonce_sz = 3
 
-    def __init__(self, lookup, mac, target):
+    def __init__(self, mac, target):
         threading.Thread.__init__(self)
-        self.lookup = lookup
         self.mac = mac
         self.target = target
         self.daemon = True
@@ -163,10 +162,15 @@ class NmapScanner(threading.Thread):
                         f'json={DIRS["json"]}/{self.mac}_{nonce}.json'])
         with open(f'{DIRS["json"]}/{self.mac}_{nonce}.json', 'r+') as f:
             data = json.load(f)
+            vendor = 'unknown'
             try:
-                data[self.target]['manufacturer'] = self.lookup(self.mac)
-            except VendorNotFoundError:
-                data[self.target]['manufacturer'] = "unknown"
+                resp = req.get(f'https://api.macvendors.com/{self.mac}')
+            except req.exceptions.ConnectionError:
+                pass
+            else:
+                if resp.status_code == 200:
+                    vendor = resp.text
+            data[self.target]['manufacturer'] = vendor
             f.seek(0)
             json.dump(data, f)
 

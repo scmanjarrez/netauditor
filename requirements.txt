@@ -2,4 +2,4 @@ scapy
 python3-nmap
 apscheduler
 netifaces
-mac-vendor-lookup
+requests

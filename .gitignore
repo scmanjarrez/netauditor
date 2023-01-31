@@ -1,4 +1,5 @@
 ## Own ignore
+extras/vpn.py
 netauditor-container/
 netauditor-image/
 tmp/

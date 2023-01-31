@@ -7,6 +7,7 @@ Tool to monitor, scan and analyze network devices
   - [Run](#run)
     - [Pre-launch](#pre-launch)
     - [Launch](#launch)
+  - [Custom modules](#custom-modules)
   - [Output](#output)
   - [Docker container](#docker-container)
   - [Acknowledgements](#acknowledgements)
@@ -52,6 +53,10 @@ $ sudo python netauditor.py
 ```
 
 > **Note:** Due to arp (packets sent), super user is needed
+
+# Custom modules
+In order to create custom logic, create a python file in **extras** folder
+with a **main** function, it will be called automatically on launch.
 
 # Output
 Scan analysis are generated in **output** folder. Output is divided

@@ -24,22 +24,23 @@
 
 # from zerconf import ServiceBrowser, ZeroConf  # apple devices
 from apscheduler.schedulers.background import BackgroundScheduler
-from mac_vendor_lookup import MacLookup
+from importlib import import_module
+from pathlib import Path
 
 import scapy.all as scp
 import utils as ut
-import threading
 import ipaddress
 import netifaces
-import datetime
+import threading
 import argparse
+import datetime
+import glob
 
 
 class ARPMonitor(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         self.cache = {}
-        self.lookup = MacLookup().lookup
         self.daemon = True
 
     def run(self):
@@ -73,7 +74,7 @@ class ARPMonitor(threading.Thread):
             if target is not None:
                 ut.log('info',
                        f"Starting analysis: {target[0]} - {target[1]}")
-                th = ut.NmapScanner(self.lookup, *target)
+                th = ut.NmapScanner(*target)
                 th.start()
 
 
@@ -81,9 +82,9 @@ def arp_scanner(args):
     ut.log('info', "Running scheduled job...")
     subnets = []
     for name in netifaces.interfaces():
-        if (name != 'lo' and
-            (not name.startswith('vmnet') or args.force_vmnet) and
-            (not name.startswith('docker') or args.force_docker)):  # noqa
+        if (name != 'lo'
+                and (not name.startswith('vmnet') or args.force_vmnet)
+                and (not name.startswith('docker') or args.force_docker)):
             if netifaces.AF_INET in netifaces.ifaddresses(name):
                 iface = netifaces.ifaddresses(name)[netifaces.AF_INET]
                 for sn in iface:
@@ -99,7 +100,7 @@ def arp_scanner(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        prog='python netuaditor.py',
+        prog='python netauditor.py',
         description="Network scanner and analyzer.")
     parser.add_argument('-v', '--verbose', action='store_true',
                         help="Verbose output.")
@@ -119,6 +120,11 @@ def main():
 
     monitor = ARPMonitor()
     monitor.start()
+
+    modules = [Path(path).stem for path in glob.glob('extras/*.py')]
+    for mod in modules:
+        tmp = import_module(f'extras.{mod}')
+        tmp.main()
 
     scheduler = BackgroundScheduler(timezone="Europe/Madrid")
     scheduler.add_job(arp_scanner, 'interval', args=(args,),
