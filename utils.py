@@ -48,6 +48,7 @@ LOG = {
     'warn': '[!] ', 'error': '[!] ',
     'enabled': False}
 UID = None
+SEM = threading.Semaphore()
 
 
 def disable_ansi_colors():
@@ -164,7 +165,10 @@ class NmapScanner(threading.Thread):
             data = json.load(f)
             vendor = 'unknown'
             try:
+                SEM.acquire(True)  # API only allows 1 req/sec
                 resp = req.get(f'https://api.macvendors.com/{self.mac}')
+                time.sleep(1)
+                SEM.release()
             except req.exceptions.ConnectionError:
                 pass
             else:
