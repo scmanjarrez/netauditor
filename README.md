@@ -79,7 +79,7 @@ the Comunidad de Madrid project CYNAMON P2018/TCS-4566 and co-financed by Europe
 Structural Funds (ESF and FEDER)**
 
 # License
-    netauditor  Copyright (C) 2022-2023 Sergio Chica Manjarrez @ pervasive.it.uc3m.es.
+    netauditor  Copyright (C) 2022-2024 Sergio Chica Manjarrez @ pervasive.it.uc3m.es.
     Universidad Carlos III de Madrid.
     This program comes with ABSOLUTELY NO WARRANTY; for details check below.
     This is free software, and you are welcome to redistribute it
